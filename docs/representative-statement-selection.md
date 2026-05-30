@@ -166,7 +166,7 @@ Once the winner is chosen:
 - `p_value` becomes the winner’s p-value
 - BH/FDR is applied over chosen-label p-values within the group
 - `selected` marks the rows that pass the inferential cutoff
-- `signal_strength` is then computed as a stricter practical layer on top, where stronger thresholds on participation, seen-vote count, effect size, and p-value can apply
+- `signal_strength` is a stricter practical layer on top of selected, effect_size, p_value, and participation. So signals can either be "strong" or "normal". 
 
 ## Note on `pass` and missing votes
 

@@ -388,32 +388,49 @@ def classify_signal_strength(
     selected: bool,
     effect_size: float,
     p_value: float,
-    ns: int,
-    max_seen_in_group: int,
-    group_size: Optional[int] = None,
+    n_seen: int,
+    group_size: int,
     strong_effect_min: float,
-    strong_seen_min: Optional[int],
-    strong_participation_min: Optional[float],
+    strong_small_group_cutoff: Optional[int],
+    strong_large_group_participation_min: Optional[float],
     strong_p_max: Optional[float],
 ) -> Literal["normal", "strong"]:
-    if not selected or effect_size < strong_effect_min:
-        return "normal"
+    """Classify a selected statement as having normal or strong signal.
 
-    if strong_seen_min is not None and ns < strong_seen_min:
+    A statement can only be strong if it:
+    - passes inferential selection
+    - clears the effect-size threshold
+    - clears the p-value threshold
+    - reaches the required participation level
+
+    Participation policy:
+    - if ``group_size`` is smaller than ``strong_small_group_cutoff``,
+      require full participation
+    - otherwise require ``strong_large_group_participation_min``
+    """
+    if not selected or effect_size < strong_effect_min:
         return "normal"
 
     if strong_p_max is not None and p_value > strong_p_max:
         return "normal"
 
-    if strong_participation_min is not None:
-        if group_size is not None and group_size > 0:
-            current_participation_rate = ns / group_size
-        else:
-            current_participation_rate = (
-                0.0 if max_seen_in_group <= 0 else ns / max_seen_in_group
-            )
-        if current_participation_rate < strong_participation_min:
-            return "normal"
+    if group_size <= 0:
+        return "normal"
+
+    participation = n_seen / group_size
+    required_participation = strong_large_group_participation_min
+
+    if (
+        strong_small_group_cutoff is not None
+        and group_size < strong_small_group_cutoff
+    ):
+        required_participation = 1.0
+
+    if (
+        required_participation is not None
+        and participation < required_participation
+    ):
+        return "normal"
 
     return "strong"
 
@@ -1064,8 +1081,8 @@ def rank_representative_statements(
     divisive_n_resamples: int = 999,
     divisive_random_state: Optional[int] = None,
     strong_effect_min: float = 1.0,
-    strong_seen_min: int = 5,
-    strong_participation_min: Optional[float] = 1.0,
+    strong_small_group_cutoff: Optional[int] = 5,
+    strong_large_group_participation_min: Optional[float] = 0.8,
     strong_p_max: Optional[float] = 0.05,
 ) -> dict[int, list[RankedRepnessStatement]]:
     """
@@ -1208,21 +1225,23 @@ def rank_representative_statements(
         rank_order = np.argsort(-effect_sizes)
         ranks = np.empty(n, dtype=int)
         ranks[rank_order] = np.arange(1, n + 1)
-        max_seen_in_group = int(group_df["ns"].max()) if len(group_df) else 0
 
         statements: list[RankedRepnessStatement] = []
         for idx in rank_order:
             row = group_df.iloc[idx]
+            n_seen = int(row["ns"])
+            group_size = int(row["group_size"])
             signal_strength = classify_signal_strength(
                 selected=bool(selected_mask[idx]),
                 effect_size=float(effect_sizes[idx]),
                 p_value=float(p_combined[idx]),
-                ns=int(row["ns"]),
-                max_seen_in_group=max_seen_in_group,
-                group_size=int(row["group_size"]),
+                n_seen=n_seen,
+                group_size=group_size,
                 strong_effect_min=strong_effect_min,
-                strong_seen_min=strong_seen_min,
-                strong_participation_min=strong_participation_min,
+                strong_small_group_cutoff=strong_small_group_cutoff,
+                strong_large_group_participation_min=(
+                    strong_large_group_participation_min
+                ),
                 strong_p_max=strong_p_max,
             )
             statements.append(

@@ -8,6 +8,7 @@ from reddwarf.utils.stats import (
     choose_agora_thresholded_winners,
     benjamini_hochberg,
     calculate_comment_statistics_dataframes,
+    classify_signal_strength,
     rank_representative_statements,
     z_to_pvalue,
 )
@@ -229,6 +230,76 @@ def test_rank_representative_statements_zero_vote_filter():
         sel_with = {s.statement_id for s in result_with[gid] if s.selected and s.statement_id != 99}
         sel_without = {s.statement_id for s in result_without[gid] if s.selected}
         assert sel_with == sel_without
+
+
+def test_classify_signal_strength_small_group_requires_full_participation():
+    assert classify_signal_strength(
+        selected=True,
+        effect_size=2.0,
+        p_value=0.01,
+        n_seen=4,
+        group_size=4,
+        strong_effect_min=1.0,
+        strong_small_group_cutoff=5,
+        strong_large_group_participation_min=0.8,
+        strong_p_max=0.05,
+    ) == "strong"
+
+
+def test_classify_signal_strength_small_group_partial_participation_is_normal():
+    assert classify_signal_strength(
+        selected=True,
+        effect_size=2.0,
+        p_value=0.01,
+        n_seen=3,
+        group_size=4,
+        strong_effect_min=1.0,
+        strong_small_group_cutoff=5,
+        strong_large_group_participation_min=0.8,
+        strong_p_max=0.05,
+    ) == "normal"
+
+
+def test_classify_signal_strength_group_of_five_uses_eighty_percent_rule():
+    assert classify_signal_strength(
+        selected=True,
+        effect_size=2.0,
+        p_value=0.01,
+        n_seen=4,
+        group_size=5,
+        strong_effect_min=1.0,
+        strong_small_group_cutoff=5,
+        strong_large_group_participation_min=0.8,
+        strong_p_max=0.05,
+    ) == "strong"
+
+
+def test_classify_signal_strength_large_group_low_participation_is_normal():
+    assert classify_signal_strength(
+        selected=True,
+        effect_size=2.0,
+        p_value=0.01,
+        n_seen=5,
+        group_size=50,
+        strong_effect_min=1.0,
+        strong_small_group_cutoff=5,
+        strong_large_group_participation_min=0.8,
+        strong_p_max=0.05,
+    ) == "normal"
+
+
+def test_classify_signal_strength_non_positive_group_size_is_normal():
+    assert classify_signal_strength(
+        selected=True,
+        effect_size=2.0,
+        p_value=0.01,
+        n_seen=4,
+        group_size=0,
+        strong_effect_min=1.0,
+        strong_small_group_cutoff=5,
+        strong_large_group_participation_min=0.8,
+        strong_p_max=0.05,
+    ) == "normal"
 
 
 # --- rank_consensus_statements ---
