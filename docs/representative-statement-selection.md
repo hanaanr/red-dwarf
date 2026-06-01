@@ -143,7 +143,7 @@ p_disagree = simes(p_from_z(pdt), p_from_z(rdt))
 
 For `divisive`,  a dedicated one-sided permutation test is used, which answers: is this group more internally split on this statement than the out-groups?
 
-Statements with `min(na, nd) < 2` are not allowed to survive as divisive winners, so their divisive p-value is effectively treated as non-significant.
+A `divisive_p_value` is computed for each row. However, statements with `min(na, nd) < 2` cannot win the `divisive` label, so that thin splits like 1-1 (which is perfectly 50-50) do not rise as divisive winners too early. 
 
 ### Step 4: Choose the winning label
 

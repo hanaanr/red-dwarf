@@ -1108,12 +1108,18 @@ def rank_representative_statements(
     )
     grouped_stats_df = grouped_stats_df[~mod_out_mask]  # type: ignore
 
-    result: dict[int, list[RankedRepnessStatement]] = {}
-    group_rng = np.random.default_rng(divisive_random_state)
-
     cluster_labels_arr = np.asarray(cluster_labels, dtype=int)
     if len(cluster_labels_arr) != len(vote_matrix.index):
         raise ValueError("cluster_labels must align with vote_matrix rows")
+
+    n_groups = np.unique(cluster_labels_arr).size
+    if n_groups < 2:
+        raise ValueError(
+            f"Agora representative ranking requires at least 2 distinct groups; got {n_groups}."
+        )
+
+    result: dict[int, list[RankedRepnessStatement]] = {}
+    group_rng = np.random.default_rng(divisive_random_state)
 
     for gid, group_df in grouped_stats_df.groupby(level="group_id"):
         group_df = group_df.reset_index()
@@ -1225,7 +1231,6 @@ def rank_representative_statements(
         rank_order = np.argsort(-effect_sizes)
         ranks = np.empty(n, dtype=int)
         ranks[rank_order] = np.arange(1, n + 1)
-
         statements: list[RankedRepnessStatement] = []
         for idx in rank_order:
             row = group_df.iloc[idx]

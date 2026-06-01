@@ -140,6 +140,25 @@ def test_rank_representative_statements_requires_cluster_context():
         rank_representative_statements(pd.DataFrame())
 
 
+def test_rank_representative_statements_requires_at_least_two_groups():
+    vote_matrix = pd.DataFrame({0: [1, -1, 1]}, index=[0, 1, 2])
+    cluster_labels = [0, 0, 0]
+    grouped_stats_df, _ = calculate_comment_statistics_dataframes(
+        vote_matrix=vote_matrix,
+        cluster_labels=cluster_labels,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="Agora representative ranking requires at least 2 distinct groups",
+    ):
+        rank_representative_statements(
+            grouped_stats_df=grouped_stats_df,
+            vote_matrix=vote_matrix,
+            cluster_labels=cluster_labels,
+        )
+
+
 def test_rank_representative_statements_all_present():
     vote_matrix, cluster_labels = _make_three_statement_vote_matrix()
     result = _rank_vote_matrix(vote_matrix, cluster_labels)
